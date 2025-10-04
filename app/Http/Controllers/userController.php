@@ -15,6 +15,18 @@ class UserController extends Controller
         return view('users.index', compact('users'));
     }
 
+    // TAMBAHKAN METHOD INI
+    public function edit(User $user)
+    {
+        return response()->json([
+            'id' => $user->id,
+            'name' => $user->name,
+            'role' => $user->role,
+            'kelas' => $user->kelas,
+            'nis' => $user->nis
+        ]);
+    }
+
     public function store(Request $request)
     {
         $rules = [

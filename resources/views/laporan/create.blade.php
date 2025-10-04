@@ -260,5 +260,168 @@
         // Trigger input event to update counter initially
         textarea.dispatchEvent(new Event('input'));
     });
+
+document.addEventListener('DOMContentLoaded', function() {
+    // Real-time IP validation
+    const ipInputs = document.querySelectorAll('input[name^="ip_pc"]');
+
+    ipInputs.forEach(input => {
+        input.addEventListener('blur', function() {
+            validateIPAddress(this);
+        });
+
+        input.addEventListener('input', function() {
+            // Remove error state when user starts typing
+            if (this.classList.contains('border-red-500')) {
+                this.classList.remove('border-red-500', 'text-red-500');
+                this.classList.add('border-gray-300', 'text-gray-700');
+                hideIPError(this);
+            }
+        });
+    });
+
+    function validateIPAddress(input) {
+        const value = input.value.trim();
+
+        if (value === '') {
+            return true; // Empty is allowed (nullable)
+        }
+
+        // Basic IP validation pattern
+        const ipPattern = /^(\d{1,3}\.){3}\d{1,3}(\/\d{1,2})?$/;
+        const wildcardPattern = /^(\d{1,3}|\*)\.(\d{1,3}|\*)\.(\d{1,3}|\*)\.(\d{1,3}|\*)$/;
+
+        let isValid = false;
+
+        if (ipPattern.test(value)) {
+            // Validate IPv4 format
+            const parts = value.split('/');
+            const ipParts = parts[0].split('.');
+
+            isValid = ipParts.every(part => {
+                const num = parseInt(part);
+                return num >= 0 && num <= 255;
+            });
+
+            // Validate subnet mask if present
+            if (isValid && parts.length > 1) {
+                const mask = parseInt(parts[1]);
+                isValid = mask >= 0 && mask <= 32;
+            }
+        } else if (wildcardPattern.test(value)) {
+            // Validate wildcard format
+            const ipParts = value.split('.');
+            isValid = ipParts.every(part => {
+                if (part === '*') return true;
+                const num = parseInt(part);
+                return num >= 0 && num <= 255;
+            });
+        }
+
+        if (!isValid && value !== '') {
+            showIPError(input, 'Format IP address tidak valid. Contoh: 192.168.1.1 atau 192.168.1.0/24');
+            return false;
+        }
+
+        return true;
+    }
+
+    function showIPError(input, message) {
+        input.classList.add('border-red-500', 'text-red-500');
+        input.classList.remove('border-gray-300', 'text-gray-700');
+
+        // Remove existing error message
+        hideIPError(input);
+
+        // Add error message
+        const errorDiv = document.createElement('div');
+        errorDiv.className = 'mt-1 text-sm text-red-600 flex items-center';
+        errorDiv.innerHTML = `<i class="fas fa-exclamation-circle mr-1"></i> ${message}`;
+        errorDiv.id = `error-${input.name}`;
+
+        input.parentNode.appendChild(errorDiv);
+    }
+
+    function hideIPError(input) {
+        const existingError = document.getElementById(`error-${input.name}`);
+        if (existingError) {
+            existingError.remove();
+        }
+    }
+
+    // Form submission validation
+    const form = document.querySelector('form');
+    form.addEventListener('submit', function(e) {
+        let isValid = true;
+
+        // Validate all IP inputs
+        ipInputs.forEach(input => {
+            if (!validateIPAddress(input)) {
+                isValid = false;
+                // Scroll to first error
+                if (isValid === false) {
+                    input.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    input.focus();
+                    isValid = true; // Prevent multiple scrolls
+                }
+            }
+        });
+
+        if (!isValid) {
+            e.preventDefault();
+            // Show general error message
+            showGeneralError('Terdapat error dalam format IP address. Silakan periksa kembali.');
+        }
+    });
+
+    function showGeneralError(message) {
+        // Remove existing general error
+        hideGeneralError();
+
+        const errorDiv = document.createElement('div');
+        errorDiv.className = 'mb-4 p-4 bg-red-50 border border-red-200 rounded-xl animate-pulse';
+        errorDiv.innerHTML = `
+            <div class="flex items-center">
+                <i class="fas fa-exclamation-triangle text-red-600 mr-3"></i>
+                <div>
+                    <h3 class="text-sm font-medium text-red-800">Validasi Gagal</h3>
+                    <p class="text-sm text-red-700 mt-1">${message}</p>
+                </div>
+            </div>
+        `;
+        errorDiv.id = 'general-ip-error';
+
+        form.prepend(errorDiv);
+    }
+
+    function hideGeneralError() {
+        const existingError = document.getElementById('general-ip-error');
+        if (existingError) {
+            existingError.remove();
+        }
+    }
+
+    // Auto-format IP address on blur
+    ipInputs.forEach(input => {
+        input.addEventListener('blur', function() {
+            const value = this.value.trim();
+            if (value && this.isValidIPFormat(value)) {
+                this.value = this.autoFormatIP(value);
+            }
+        });
+    });
+
+    // Helper function to auto-format IP
+    function autoFormatIP(ip) {
+        // Remove extra spaces and normalize
+        return ip.replace(/\s+/g, '').toLowerCase();
+    }
+
+    // Helper function to check basic IP format
+    function isValidIPFormat(ip) {
+        const basicPattern = /^[\d.*\/-]+$/;
+        return basicPattern.test(ip);
+    }
+});
 </script>
 @endsection
